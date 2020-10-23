@@ -138,4 +138,27 @@ Save these two dataframes.
 ```{r save_data}
 write.csv(dogs_df,"./data/dogs_df.csv")
 write.csv(notes_df,"./data/notes_df.csv")
+
+```
+
+
+# Problem 2
+
+For the tidy dataset `dogs_df`, there are `r nrow(dogs_df)` rows and `r ncol(dogs_df)` variables, the number of unique dates is `r n_distinct(pull(dogs_df, date))`, including `r sum(is.na(unique(pull(dogs_df,date)))) ` missing value in `date`.
+
+
+
+```{r cleaned_data}
+dogs_df %>% 
+  filter(object != "std") %>%
+  # noticing that there are NA in the weight_lbs, so we cannot use summarize directly
+  count(object, weight_lbs, name = "counts") %>% 
+  drop_na(weight_lbs) %>% 
+  group_by(object) %>% 
+  summarise(
+    n_obs = sum(counts),
+    mean_weight = mean(weight_lbs),
+    sd_weight = sd(weight_lbs)
+  ) %>% 
+  knitr::kable(digits = 2, caption = "Summarize for the three dogs weight")
 ```
