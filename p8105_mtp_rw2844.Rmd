@@ -1,0 +1,141 @@
+---
+title: "p8105_mtp_rw2844"
+author: "Renjie Wei"
+date: "10/23/2020"
+output: 
+  github_document:
+    toc: TRUE
+---
+
+```{r setup, include = FALSE}
+library(tidyverse)
+library(readxl)
+library(patchwork)
+library(ggridges)
+library(rvest)
+knitr::opts_chunk$set(
+	echo = TRUE,
+	warning = FALSE,
+	message = FALSE,
+	fig.width = 10, 
+  fig.height = 8,
+  out.width = "90%"
+)
+theme_set(theme_minimal() + theme(legend.position = "bottom"))
+options(
+  ggplot2.continuous.colour = "viridis", 
+  ggplot2.continuous.fill = "viridis"
+)
+scale_colour_discrete = scale_colour_viridis_d
+scale_fill_discrete = scale_fill_viridis_d
+```
+
+# Report
+
+## Problem 1
+
+First, I imported the data.
+```{r read_data}
+dog_weight = 
+  read_excel("./data/dogweights_07sept2020.xlsx", 
+    sheet = "Sheet1", range = "B2:G207", 
+    col_types = c("date", "text", "text", 
+        "text", "text", "text")) %>% 
+  janitor::clean_names() 
+colnames(dog_weight) = c("date", "raisin", "simone", "gagne", "std", "notes")
+# a missing value in date
+```
+
+In this chunk, I cleaned and manipulated the data, selected columns except the notes, the major steps are:
+
+* Separate the weight data into different units(Lbs and Oz).
+
+* Do some calculation, generate a new variable to combine Lbs and Oz into one unit.
+
+* Make the dataset looks better using `pivot_longer`.
+
+* Select the variables of interest.
+```{r frame_1}
+dogs_df = 
+  dog_weight %>%
+  # Noticing that weight of 3 dogs are in two different unit, we need to split it into two columns
+  separate(
+    col = c("raisin"),
+    into = c("raisin_lbs", "raisin_oz"),
+    sep = (2)
+  ) %>% 
+  separate(
+    col = c("simone"),
+    into = c("simone_lbs", "simone_oz"),
+    sep = (2)
+  ) %>% 
+  separate(
+    col = c("gagne"),
+    into = c("gagne_lbs", "gagne_oz"),
+    sep = (2)
+  ) %>% 
+  separate(
+    col = c("std"),
+    into = c("std_lbs", "std_oz"),
+    sep = (2)
+  ) %>% 
+  # change variables type
+  mutate(
+    raisin_lbs = as.numeric(raisin_lbs),
+    raisin_oz = as.numeric(raisin_oz),
+    simone_lbs = as.numeric(simone_lbs),
+    simone_oz = as.numeric(simone_oz),
+    gagne_lbs = as.numeric(gagne_lbs),
+    gagne_oz = as.numeric(gagne_oz),
+    std_lbs = as.numeric(std_lbs),
+    std_oz = as.numeric(std_oz)
+  ) %>% 
+  # assuming that 1 lbs equals 16 oz, combine two rows
+  # noticing that there is a outlier in raisin's weight(7 Lbs 15 Oz), it might be a typo, I'm gonna to fix it
+  mutate(
+    raisin = raisin_lbs + (raisin_oz/16),
+    simone = simone_lbs + (simone_oz/16), 
+    gagne = gagne_lbs + (gagne_oz/16),
+    std = std_lbs + (std_oz/16),
+    raisin = case_when(
+      raisin >= 10 ~ raisin,
+      raisin < 10 ~ raisin+10
+    )
+  ) %>% 
+  # make the data looks better
+  pivot_longer(
+    raisin:std,
+    names_to = "object",
+    values_to = "weight_lbs"
+  ) %>% 
+  mutate(date = as.Date(date), object = as.factor(object)) %>% 
+  # remain what we need
+  select(date, object, weight_lbs)
+
+# check for variable types
+str(dogs_df)
+
+# show the dataframe
+dogs_df %>% 
+  head(12) %>% 
+  knitr::kable(digits = 2, caption = "The weight of three dogs(Lbs), first 12 rows")
+```
+
+In the next chunk, I am going to create a dataframe that only includes notes and dates.
+
+```{r frame_2}
+notes_df = 
+  dog_weight %>% 
+  select(date, notes) %>% 
+  drop_na(notes)
+
+notes_df %>% 
+  knitr::kable(caption = "Notes and dates")
+```
+
+Save these two dataframes.
+
+```{r save_data}
+write.csv(dogs_df,"./data/dogs_df.csv")
+write.csv(notes_df,"./data/notes_df.csv")
+```
