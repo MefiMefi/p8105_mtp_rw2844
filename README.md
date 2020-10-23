@@ -6,3 +6,8 @@ Midterm project
 2. Problem 1 Finished
 
 3. Problem 2 Finished
+
+4. Problem 3 Finished
+
+notes:
+I have delete this repo once since i got trouble in push, I think this time it would work nicely :)
